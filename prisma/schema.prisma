@@ -1,0 +1,86 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector]
+}
+
+enum UserRole {
+  ADMIN
+  AGENT
+}
+
+// Auth skeleton for the gradual MongoDB -> Postgres migration.
+// Only used by admin-area modules for now; the WhatsApp module stays public.
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(AGENT)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedConversations WhatsappConversation[] @relation("AssignedAgent")
+
+  @@map("users")
+}
+
+enum ConversationStatus {
+  BOT
+  ESCALATED
+  RESOLVED
+}
+
+model WhatsappConversation {
+  id          String              @id @default(uuid())
+  phoneNumber String              @unique
+  status      ConversationStatus  @default(BOT)
+  assignedTo  User?               @relation("AssignedAgent", fields: [assignedToId], references: [id])
+  assignedToId String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  messages WhatsappMessage[]
+
+  @@map("whatsapp_conversations")
+}
+
+enum MessageSender {
+  CLIENT
+  BOT
+  AGENT
+}
+
+model WhatsappMessage {
+  id             String               @id @default(uuid())
+  conversation   WhatsappConversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  sender         MessageSender
+  content        String
+  whatsappMessageId String?           @unique
+  createdAt      DateTime             @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("whatsapp_messages")
+}
+
+// Knowledge base for RAG-grounded AI replies (pgvector).
+// The `embedding` column is managed via raw SQL (see prisma/migrations) because
+// Prisma Client has no native vector type — reads/writes go through $queryRaw.
+model FaqEntry {
+  id        String                  @id @default(uuid())
+  question  String
+  answer    String
+  category  String?
+  embedding Unsupported("vector(1536)")?
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  @@map("faq_entries")
+}
