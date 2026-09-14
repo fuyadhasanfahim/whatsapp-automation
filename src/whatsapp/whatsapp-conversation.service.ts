@@ -20,9 +20,15 @@ export class WhatsappConversationService {
     });
   }
 
-  async hasPriorMessages(conversationId: string): Promise<boolean> {
-    const count = await this.prisma.whatsappMessage.count({ where: { conversationId } });
-    return count > 0;
+  // Most recent turns first (for a cheap LIMIT), returned oldest-first so callers
+  // can drop them straight into a chat completion's message list.
+  async getRecentMessages(conversationId: string, limit = 12) {
+    const rows = await this.prisma.whatsappMessage.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+    return rows.reverse();
   }
 
   async escalate(conversationId: string) {
