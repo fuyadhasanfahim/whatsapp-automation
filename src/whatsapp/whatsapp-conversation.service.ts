@@ -20,6 +20,11 @@ export class WhatsappConversationService {
     });
   }
 
+  async hasPriorMessages(conversationId: string): Promise<boolean> {
+    const count = await this.prisma.whatsappMessage.count({ where: { conversationId } });
+    return count > 0;
+  }
+
   async escalate(conversationId: string) {
     return this.prisma.whatsappConversation.update({
       where: { id: conversationId },

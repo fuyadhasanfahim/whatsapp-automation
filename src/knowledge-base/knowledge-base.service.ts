@@ -29,13 +29,18 @@ export class KnowledgeBaseService {
   }
 
   // Cosine distance (<=>) is the recommended pgvector operator for OpenAI embeddings.
+  // Rows past MAX_RELEVANT_DISTANCE are topically unrelated — including them as "context"
+  // just gives the model something irrelevant to (wrongly) answer from instead of admitting
+  // it doesn't know, so they're filtered out in SQL rather than left for the caller to guess about.
   async findRelevantFaqs(question: string, limit = 3): Promise<FaqMatch[]> {
     const embedding = await this.openAi.embed(question);
     const vectorLiteral = toVectorLiteral(embedding);
+    const maxDistance = 0.45;
 
     return this.prisma.$queryRaw<FaqMatch[]>`
       SELECT id, question, answer, embedding <=> ${vectorLiteral}::vector AS distance
       FROM faq_entries
+      WHERE embedding <=> ${vectorLiteral}::vector < ${maxDistance}
       ORDER BY embedding <=> ${vectorLiteral}::vector
       LIMIT ${limit}
     `;

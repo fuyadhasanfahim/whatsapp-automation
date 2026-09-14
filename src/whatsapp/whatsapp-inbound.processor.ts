@@ -28,9 +28,10 @@ export class WhatsappInboundProcessor extends WorkerHost {
     const { phoneNumber, text, whatsappMessageId } = job.data;
 
     const conversation = await this.conversations.getOrCreateConversation(phoneNumber);
+    const isFirstMessage = !(await this.conversations.hasPriorMessages(conversation.id));
     await this.conversations.recordMessage(conversation.id, MessageSender.CLIENT, text, whatsappMessageId);
 
-    const { reply, needsLiveAgent } = await this.supportAgent.handleMessage(text);
+    const { reply, needsLiveAgent } = await this.supportAgent.handleMessage(text, isFirstMessage);
 
     await this.whatsappClient.sendText(phoneNumber, reply);
     await this.conversations.recordMessage(conversation.id, MessageSender.BOT, reply);
