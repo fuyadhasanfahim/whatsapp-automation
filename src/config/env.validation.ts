@@ -45,6 +45,11 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   WHATSAPP_SUPPORT_NUMBER?: string;
+
+  // Comma-separated number(s) allowed to use the #savetomemory tag to store internal notes.
+  @IsOptional()
+  @IsString()
+  ADMIN_WHATSAPP_NUMBER?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

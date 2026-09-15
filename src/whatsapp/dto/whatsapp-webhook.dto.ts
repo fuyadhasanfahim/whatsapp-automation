@@ -2,6 +2,10 @@ export interface WhatsappWebhookPayload {
   entry?: Array<{
     changes?: Array<{
       value?: {
+        contacts?: Array<{
+          wa_id: string;
+          profile?: { name?: string };
+        }>;
         messages?: Array<{
           id: string;
           from: string;
